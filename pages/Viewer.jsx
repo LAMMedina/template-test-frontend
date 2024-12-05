@@ -33,6 +33,35 @@ const Viewer = () => {
 
     map.addLayer(departamentosLayer);
 
+    // Añadir las capas de provincias y distritos
+    const provinciasLayer = new VectorLayer({
+        source: new VectorSource({
+          url: '/data/output_provincias.geojson',
+          format: new GeoJSON(),
+        }),
+        visible: false,
+      });
+      
+      const distritosLayer = new VectorLayer({
+        source: new VectorSource({
+          url: '/data/output_distritos.geojson',
+          format: new GeoJSON(),
+        }),
+        visible: false,
+      });
+      
+      map.addLayer(provinciasLayer);
+      map.addLayer(distritosLayer);
+    
+      const view = map.getView();
+    
+      view.on('change:resolution', () => {
+        const zoom = view.getZoom();
+        departamentosLayer.setVisible(zoom < 9);
+        provinciasLayer.setVisible(zoom >= 9 && zoom < 11);
+        distritosLayer.setVisible(zoom >= 11);
+      });
+
     return () => map.setTarget(null);
   }, []);
 
