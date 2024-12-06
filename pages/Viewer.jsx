@@ -7,7 +7,6 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Cluster from 'ol/source/Cluster';
 import {Style, Icon, Text, Fill, Stroke, Circle} from 'ol/style';
-import {fromLonLat} from 'ol/proj';
 import ModalInfo from '../components/ModalInfo';
 
 
@@ -17,8 +16,8 @@ import ModalInfo from '../components/ModalInfo';
 const Viewer = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
-
-  useEffect(() => {
+  
+  useEffect(() => { 
     const map = new Map({
       target: 'map',
       layers: [
@@ -27,7 +26,8 @@ const Viewer = () => {
         }),
       ],
       view: new View({
-        center: [-8246936.494308056, -1119428.8251098266], 
+        center: [-8246936.494308056, -1119428.8251098266],
+        projection: 'EPSG:3857',
         zoom: 7,
         maxZoom: 50,
         minZoom: 5,
@@ -48,7 +48,7 @@ const Viewer = () => {
     const provinciasLayer = new VectorLayer({
         source: new VectorSource({
           url: '/data/output_provincias.geojson',
-          format: new GeoJSON(),
+          format: new GeoJSON({featureProperty: 'EPSG:3857'}),
         }),
         visible: false,
       });
@@ -56,7 +56,7 @@ const Viewer = () => {
       const distritosLayer = new VectorLayer({
         source: new VectorSource({
           url: '/data/output_distritos.geojson',
-          format: new GeoJSON(),
+          format: new GeoJSON({featureProperty: 'EPSG:3857'}),
         }),
         visible: false,
       });
@@ -65,13 +65,13 @@ const Viewer = () => {
     // Crear la capa de clúster para las instituciones educativas
     const institutionSource = new VectorSource({
         url: '/data/output_instituciones_educ.geojson', // Cargar el GeoJSON de instituciones educativas
-        format: new GeoJSON(),
+        format: new GeoJSON({featureProperty: 'EPSG:3857'}),
       });
   
       const clusterSource = new Cluster({
         distance: 40, // Distancia mínima para agrupar los puntos
         minDistance: 20, // Distancia mínima para mostrar los puntos individuales
-        source: institutionSource, // Fuente de datos del GeoJSON
+        source: institutionSource, 
       });
   
       // Capa de clúster con estilo personalizado
@@ -117,19 +117,42 @@ const Viewer = () => {
         provinciasLayer.setVisible(zoom >= 9 && zoom < 11);
         distritosLayer.setVisible(zoom >= 11);
       });
-
-       // Manejar el clic en los marcadores para mostrar el modal
-       const handleMapClick = (event) => {
+      const handleMapClick = (event) => {
         map.forEachFeatureAtPixel(event.pixel, (feature) => {
-          // Verifica si la característica es un clúster
-          if (feature.get('features')) {
-            const features = feature.get('features'); // Las características agrupadas
-            const properties = features[0].getProperties(); // Toma las propiedades de la primera institución educativa del clúster
-            setModalData(properties); // Establecer los datos para el modal
+          // Si el clic es en un clúster
+          const features = feature.get('features'); // Devuelve un array de las instituciones dentro del clúster
+          
+          if (features && features.length > 0) {
+            // Si hay varias instituciones dentro del clúster
+            const institutions = features.map((feature) => {
+              const properties = feature.getProperties(); // Obtener las propiedades de cada institución
+              return {
+                nombre: properties.nombre,
+                nivel_modalidad: properties.nivel_modalidad,
+                codigo_modular: properties.codigo_modular,
+                direccion: properties.direccion,
+                departamento: properties.departamento,
+                provincia: properties.provincia,
+                distrito: properties.distrito,
+                centro_poblado: properties.centro_poblado,
+                ugel: properties.ugel,
+                codigo_ugel: properties.codigo_ugel,
+                gestion: properties.gestion,
+                dependencia: properties.dependencia,
+                ubigeo: properties.ubigeo,
+                altitud: properties.altitud,
+                latitud: properties.latitud,
+                longitud: properties.longitud,
+              };
+            });
+      
+            // Actualizar el estado con la lista de instituciones
+            setModalData(institutions); // Pasar un array de instituciones al modal
             setModalOpen(true); // Abrir el modal
           }
         });
       };
+      
       
       map.on('click', handleMapClick); // Asociar el clic al mapa
 
